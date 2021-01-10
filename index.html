@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <style type = "text/css">
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+
+      }
+
+      code {
+        font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+          monospace;
+      }
+
+      .lineSVG {
+        width: 100%;
+        height: 100px;
+      }
+
+      .frame {
+        display: block;
+        width: 100%;
+      }
+
+      .item {
+        display: inline-flex;
+        vertical-align: middle;
+        background-color: yellow;
+        height: 100px;
+      }
+
+      .itemContent {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .real {
+        background-color: cyan;
+      }
+
+      .empty {
+        background-color: yellow;
+      }
+
+      .circut {
+        z-index: 1;
+        height: 50px;
+        width: 50px;
+        border-radius: 50% 50% 50% 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        outline: none;
+        font-size: 30px;
+      }
+
+
+
+      .lineOrigin {
+        position: absolute;
+        width: 100%;
+        top: 50%;
+
+      }
+
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="frame" id="frame">
+
+      </div>
+    </div>
+      
+  </body>
+</html>
+
+<script>
+  const data = [];
+$(document).ready(function(){
+	$('#list').ready(function(){
+	$.ajax({
+		url : '/api',
+		dataType : 'json',
+		method : 'GET',
+		data : {proc : 'going'},
+		success: function(res){
+			data = JSON.parse(res);
+	},
+
+		error: function(res){
+			console.log('ajax error2');
+		},
+	});
+
+		});
+});
+
+
+const createTree = (data) => {
+  const eS = "$"
+  const del = "_"
+
+  const widthSort = (a,b) => (b.level !== a.level) ? (+b.level - +a.level):
+    (b.pid !== a.pid) ? ((b.pid > a.pid) ? -1: 1):
+    ((b.id > a.id) ? -1: 1)
+
+  const treeSort = (a,b) => (b.level !== a.level) ? (+b.level - +a.level):
+    (b.tree > a.tree) ? -1: 1
+
+  const levelSort = (a,b) => (a.level - b.level)
+
+  const addWidth = (data) => {
+    const dNw = data.map((item) => ({...item, width: 0, childs: [], entity: "real", tree: ""})
+    ).sort(widthSort)
+
+    dNw.forEach((item, i, arr) => {
+      if (item.pid) {
+        const targetId = arr.indexOf(arr.find(target => target.id===item.pid))
+        if (arr[targetId] && arr[targetId].id) {
+          arr[targetId].childs.push(item.id)
+        }
+      }
+      if (item.childs.length) {      
+        item.width = item.childs.map((cid) => arr.find(item => item.id===cid).width).reduce((a,b) => a+b)
+      } else {
+        item.width = 1
+      }
+    })
+    return dNw.sort(levelSort)
+  }
+
+  const makeNet = (dNw) => {
+    const dIn = dNw.concat([])
+    dIn.forEach((item, i, arr) => {
+      if ((!(item.childs.length)) && (arr.find(target => target.level > item.level))) {
+        arr.push({
+          id: item.id + eS, 
+          pid: item.id, 
+          level: +item.level+1+"", 
+          width: 1,
+          entity: "empty",
+          childs: [],
+          tree: item.tree + del + item.id + eS
+        })
+        item.childs.push(item.id+eS)
+        
+      }
+      item.tree = (arr.find(target => target.id === item.pid)) ? 
+      arr.find(target => target.id === item.pid).tree + del + item.id:
+      item.id
+    })
+    return (dIn.length>dNw.length) ? makeNet(dIn): dIn.sort(treeSort).sort(levelSort)
+  }
+
+  const dIn = makeNet(addWidth(data))
+  const netWidth = dIn.find((item) => item.level == '0').width
+
+  /////////////////////////////////////
+
+  const root = document.getElementById('root')
+  const frame = document.getElementById('frame')
+  
+  dIn.forEach((item, i, data) => {
+    const childsBP = [];
+    item.childs.map(child => {
+      const childW = data.find(target => target.id === child).width;
+      childsBP.push(childsBP.length > 0 ? +childsBP[childsBP.length - 1] + 2 * childW : 2 * childW);
+    });
+    const childsP = childsBP.map((pos, num, arr) => num === 0 ? pos / 2 : (pos + arr[num - 1]) / 2);
+    const itemN = document.createElement('div')
+    itemN.setAttribute('class', 'item')
+    itemN.setAttribute('style', `width: ${item.width / netWidth * 100}%`)
+    frame.appendChild(itemN)
+    const itemContentN = document.createElement('div')
+    itemContentN.setAttribute('class', 'itemContent')
+    itemN.appendChild(itemContentN)
+    const lineOriginN = document.createElement('div')
+    lineOriginN.setAttribute('class', 'lineOrigin')
+    itemContentN.appendChild(lineOriginN)
+    const svgN = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+    svgN.setAttribute('class', 'lineSVG')
+    lineOriginN.appendChild(svgN)
+    item.childs.forEach((child, num) => {
+      if (data.find(target => target.id === child).entity === 'real') svgN.innerHTML += `<line x1="50%" y1="0%" x2=${100*childsP[num]/2/item.width}% y2='100%' stroke='black'></line>`   
+    })
+    const circleN = document.createElement('div')
+    circleN.setAttribute('class', `${(item.entity === 'real') ? 'real': 'empty'} circut`)
+    circleN.innerText=`${(item.entity !== 'empty') ? item.id: ''}`
+    itemContentN.appendChild(circleN)
+  })  
+
+}
+
+createTree(data)
+
+
+</script>

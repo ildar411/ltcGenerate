@@ -1,0 +1,21 @@
+{
+  "name": "telebot",
+  "version": "1.0.0",
+  "description": "telegram bot",
+  "main": "index.js",
+  "dependencies": {
+    "@qiwi/bill-payments-node-js-sdk": "^3.2.1",
+    "child_process": "^1.0.2",
+    "express": "^4.17.1",
+    "mysql2": "^2.2.5",
+    "node-qiwi-api": "^2.1.2",
+    "node-telegram-bot-api": "^0.50.0",
+    "save": "^2.4.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "il",
+  "license": "ISC"
+}
